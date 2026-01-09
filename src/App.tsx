@@ -1,10 +1,117 @@
 import { useState } from 'react'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import './App.css'
 
 interface Exercise {
   id: string
   name: string
   time: number // in seconds
+}
+
+interface SortableItemProps {
+  exercise: Exercise
+  editingId: string | null
+  setEditingId: (id: string | null) => void
+  updateExercise: (id: string, updates: Partial<Exercise>) => void
+  deleteExercise: (id: string) => void
+  formatTime: (seconds: number) => string
+  parseTime: (timeStr: string) => number
+}
+
+function SortableItem({
+  exercise,
+  editingId,
+  setEditingId,
+  updateExercise,
+  deleteExercise,
+  formatTime,
+  parseTime,
+}: SortableItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: exercise.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`exercise-item ${isDragging ? 'dragging' : ''}`}
+    >
+      <div className="drag-handle" {...attributes} {...listeners}>
+        ⋮⋮
+      </div>
+
+      <div className="exercise-content">
+        {editingId === exercise.id ? (
+          <input
+            type="text"
+            className="exercise-name-input"
+            value={exercise.name}
+            onChange={(e) =>
+              updateExercise(exercise.id, { name: e.target.value })
+            }
+            onBlur={() => setEditingId(null)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') setEditingId(null)
+            }}
+            autoFocus
+          />
+        ) : (
+          <div
+            className="exercise-name"
+            onClick={() => setEditingId(exercise.id)}
+          >
+            {exercise.name}
+          </div>
+        )}
+
+        <input
+          type="text"
+          className="exercise-time"
+          value={formatTime(exercise.time)}
+          onChange={(e) =>
+            updateExercise(exercise.id, { time: parseTime(e.target.value) })
+          }
+          placeholder="0:00"
+        />
+      </div>
+
+      <button
+        className="delete-btn"
+        onClick={() => deleteExercise(exercise.id)}
+        title="Delete"
+      >
+        ×
+      </button>
+    </div>
+  )
 }
 
 function App() {
@@ -14,8 +121,14 @@ function App() {
     { id: '3', name: 'Rest', time: 30 },
     { id: '4', name: 'Squats', time: 60 },
   ])
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   const addExercise = () => {
     const newExercise: Exercise = {
@@ -36,25 +149,17 @@ function App() {
     )
   }
 
-  const handleDragStart = (index: number) => {
-    setDraggedIndex(index)
-  }
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
 
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault()
-    if (draggedIndex === null || draggedIndex === index) return
+    if (over && active.id !== over.id) {
+      setExercises((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id)
+        const newIndex = items.findIndex((item) => item.id === over.id)
 
-    const newExercises = [...exercises]
-    const draggedItem = newExercises[draggedIndex]
-    newExercises.splice(draggedIndex, 1)
-    newExercises.splice(index, 0, draggedItem)
-
-    setExercises(newExercises)
-    setDraggedIndex(index)
-  }
-
-  const handleDragEnd = () => {
-    setDraggedIndex(null)
+        return arrayMove(items, oldIndex, newIndex)
+      })
+    }
   }
 
   const formatTime = (seconds: number): string => {
@@ -76,67 +181,40 @@ function App() {
   return (
     <div className="app">
       <h1>Workout Timer</h1>
-      
-      <div className="exercises-list">
-        {exercises.map((exercise, index) => (
-          <div
-            key={exercise.id}
-            className={`exercise-item ${draggedIndex === index ? 'dragging' : ''}`}
-            draggable
-            onDragStart={() => handleDragStart(index)}
-            onDragOver={(e) => handleDragOver(e, index)}
-            onDragEnd={handleDragEnd}
-          >
-            <div className="drag-handle">⋮⋮</div>
-            
-            <div className="exercise-content">
-              {editingId === exercise.id ? (
-                <input
-                  type="text"
-                  className="exercise-name-input"
-                  value={exercise.name}
-                  onChange={(e) => updateExercise(exercise.id, { name: e.target.value })}
-                  onBlur={() => setEditingId(null)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') setEditingId(null)
-                  }}
-                  autoFocus
-                />
-              ) : (
-                <div
-                  className="exercise-name"
-                  onClick={() => setEditingId(exercise.id)}
-                >
-                  {exercise.name}
-                </div>
-              )}
-              
-              <input
-                type="text"
-                className="exercise-time"
-                value={formatTime(exercise.time)}
-                onChange={(e) => updateExercise(exercise.id, { time: parseTime(e.target.value) })}
-                placeholder="0:00"
+
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={exercises.map((ex) => ex.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="exercises-list">
+            {exercises.map((exercise) => (
+              <SortableItem
+                key={exercise.id}
+                exercise={exercise}
+                editingId={editingId}
+                setEditingId={setEditingId}
+                updateExercise={updateExercise}
+                deleteExercise={deleteExercise}
+                formatTime={formatTime}
+                parseTime={parseTime}
               />
-            </div>
-            
-            <button
-              className="delete-btn"
-              onClick={() => deleteExercise(exercise.id)}
-              title="Delete"
-            >
-              ×
-            </button>
+            ))}
           </div>
-        ))}
-      </div>
+        </SortableContext>
+      </DndContext>
 
       <button className="add-btn" onClick={addExercise}>
         + Add Exercise
       </button>
 
       <div className="total-time">
-        Total Time: {formatTime(exercises.reduce((sum, ex) => sum + ex.time, 0))}
+        Total Time:{' '}
+        {formatTime(exercises.reduce((sum, ex) => sum + ex.time, 0))}
       </div>
     </div>
   )
