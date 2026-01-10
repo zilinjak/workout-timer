@@ -68,7 +68,10 @@ export function TimerView({
       {nextExercise && !nextIsRest && (
         <div className="next-exercise">
           <div className="next-label">
-            Next{isLastExerciseInSet && currentSet < sets ? ` (End of Set ${currentSet})` : ""}
+            Next
+            {isLastExerciseInSet && currentSet < sets
+              ? ` (End of Set ${currentSet})`
+              : ""}
           </div>
           <div className="next-name">{nextExercise.name}</div>
           <div className="next-time">{formatTime(nextExercise.time)}</div>

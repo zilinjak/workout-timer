@@ -60,6 +60,19 @@ export function SetupView({
     setExercises(exercises.filter((ex) => ex.id !== id));
   };
 
+  const duplicateExercise = (id: string) => {
+    const index = exercises.findIndex((ex) => ex.id === id);
+    if (index === -1) return;
+    const original = exercises[index];
+    const duplicate: Exercise = {
+      ...original,
+      id: Date.now().toString(),
+    };
+    const newExercises = [...exercises];
+    newExercises.splice(index + 1, 0, duplicate);
+    setExercises(newExercises);
+  };
+
   const updateExercise = (id: string, updates: Partial<Exercise>) => {
     setExercises(
       exercises.map((ex) => (ex.id === id ? { ...ex, ...updates } : ex))
@@ -107,6 +120,7 @@ export function SetupView({
                     setEditingId={setEditingId}
                     updateExercise={updateExercise}
                     deleteExercise={deleteExercise}
+                    duplicateExercise={duplicateExercise}
                   />
                 ))}
               </div>

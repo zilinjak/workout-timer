@@ -1,7 +1,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Exercise } from "../types";
-import { formatTime, parseTime } from "../utils";
+import { formatTime, parseTime, getColorFromName } from "../utils";
 
 interface SortableItemProps {
   exercise: Exercise;
@@ -9,6 +9,7 @@ interface SortableItemProps {
   setEditingId: (id: string | null) => void;
   updateExercise: (id: string, updates: Partial<Exercise>) => void;
   deleteExercise: (id: string) => void;
+  duplicateExercise: (id: string) => void;
 }
 
 export function SortableItem({
@@ -17,6 +18,7 @@ export function SortableItem({
   setEditingId,
   updateExercise,
   deleteExercise,
+  duplicateExercise,
 }: SortableItemProps) {
   const {
     attributes,
@@ -27,10 +29,20 @@ export function SortableItem({
     isDragging,
   } = useSortable({ id: exercise.id });
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "c") {
+      e.preventDefault();
+      duplicateExercise(exercise.id);
+    }
+  };
+
+  const exerciseColor = getColorFromName(exercise.name);
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+    borderLeft: `4px solid ${exerciseColor}`,
   };
 
   return (
@@ -38,6 +50,8 @@ export function SortableItem({
       ref={setNodeRef}
       style={style}
       className={`exercise-item ${isDragging ? "dragging" : ""}`}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
     >
       <div className="drag-handle" {...attributes} {...listeners}>
         ⋮⋮
