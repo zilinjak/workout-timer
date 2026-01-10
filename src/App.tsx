@@ -176,18 +176,15 @@ function App() {
       // Move to next exercise in the current set
       setCurrentExerciseIndex((prev) => prev + 1)
       setTimeRemaining(exercises[currentExerciseIndex + 1].time)
-      setIsRestingBetweenSets(false)
     } else if (currentSet < sets) {
-      // Finished a set, check if we need rest
+      // Finished a set, move to next
+      setCurrentSet((prev) => prev + 1)
       if (betweenSetRest > 0) {
         setIsRestingBetweenSets(true)
         setTimeRemaining(betweenSetRest)
-        setCurrentSet((prev) => prev + 1)
       } else {
-        setCurrentSet((prev) => prev + 1)
         setCurrentExerciseIndex(0)
         setTimeRemaining(exercises[0].time)
-        setIsRestingBetweenSets(false)
       }
     } else {
       // Finished all sets
@@ -243,7 +240,7 @@ function App() {
     const newExercise: Exercise = {
       id: Date.now().toString(),
       name: 'New Exercise',
-      time: 10,
+      time: 60,
     }
     setExercises([...exercises, newExercise])
   }
@@ -442,8 +439,8 @@ function App() {
       )}
       {isRestingBetweenSets && (
         <div className="next-exercise">
-          <div className="next-label">Next Set</div>
-          <div className="next-name">Starting Set {currentSet}</div>
+          <div className="next-label">Up Next</div>
+          <div className="next-name">Set {currentSet}</div>
         </div>
       )}
 
