@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -23,6 +23,8 @@ interface Exercise {
   name: string
   time: number // in seconds
 }
+
+type TimerState = 'setup' | 'running' | 'paused' | 'finished'
 
 interface SortableItemProps {
   exercise: Exercise
@@ -122,6 +124,15 @@ function App() {
     { id: '4', name: 'Squats', time: 60 },
   ])
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [sets, setSets] = useState(3)
+  const [betweenSetRest, setBetweenSetRest] = useState(0)
+  const [timerState, setTimerState] = useState<TimerState>('setup')
+  const [currentSet, setCurrentSet] = useState(1)
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0)
+  const [timeRemaining, setTimeRemaining] = useState(0)
+  const [isRestingBetweenSets, setIsRestingBetweenSets] = useState(false)
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false)
+  const intervalRef = useRef<number | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -130,11 +141,109 @@ function App() {
     })
   )
 
+  useEffect(() => {
+    if (timerState === 'running' && timeRemaining > 0) {
+      intervalRef.current = window.setInterval(() => {
+        setTimeRemaining((prev) => {
+          if (prev <= 1) {
+            advanceToNext()
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
+  }, [timerState, timeRemaining])
+
+  const advanceToNext = () => {
+    if (isRestingBetweenSets) {
+      // Finished resting, start the new set
+      setCurrentExerciseIndex(0)
+      setTimeRemaining(exercises[0].time)
+      setIsRestingBetweenSets(false)
+    } else if (currentExerciseIndex < exercises.length - 1) {
+      // Move to next exercise in the current set
+      setCurrentExerciseIndex((prev) => prev + 1)
+      setTimeRemaining(exercises[currentExerciseIndex + 1].time)
+      setIsRestingBetweenSets(false)
+    } else if (currentSet < sets) {
+      // Finished a set, check if we need rest
+      if (betweenSetRest > 0) {
+        setIsRestingBetweenSets(true)
+        setTimeRemaining(betweenSetRest)
+        setCurrentSet((prev) => prev + 1)
+      } else {
+        setCurrentSet((prev) => prev + 1)
+        setCurrentExerciseIndex(0)
+        setTimeRemaining(exercises[0].time)
+        setIsRestingBetweenSets(false)
+      }
+    } else {
+      // Finished all sets
+      setTimerState('finished')
+    }
+  }
+
+  const startWorkout = () => {
+    if (exercises.length === 0) return
+    setCurrentSet(1)
+    setCurrentExerciseIndex(0)
+    setTimeRemaining(exercises[0].time)
+    setIsRestingBetweenSets(false)
+    setTimerState('running')
+  }
+
+  const pauseWorkout = () => {
+    setTimerState('paused')
+  }
+
+  const resumeWorkout = () => {
+    setTimerState('running')
+  }
+
+  const handleHomeClick = () => {
+    setShowQuitConfirm(true)
+    setTimerState('paused')
+  }
+
+  const confirmQuit = () => {
+    setTimerState('setup')
+    setShowQuitConfirm(false)
+    setCurrentSet(1)
+    setCurrentExerciseIndex(0)
+    setTimeRemaining(0)
+    setIsRestingBetweenSets(false)
+  }
+
+  const cancelQuit = () => {
+    setShowQuitConfirm(false)
+    setTimerState('running')
+  }
+
+  const restartWorkout = () => {
+    setTimerState('setup')
+    setCurrentSet(1)
+    setCurrentExerciseIndex(0)
+    setTimeRemaining(0)
+    setIsRestingBetweenSets(false)
+  }
+
   const addExercise = () => {
     const newExercise: Exercise = {
       id: Date.now().toString(),
       name: 'New Exercise',
-      time: 60,
+      time: 10,
     }
     setExercises([...exercises, newExercise])
   }
@@ -178,43 +287,176 @@ function App() {
     return parseInt(timeStr) || 0
   }
 
-  return (
-    <div className="app">
-      <h1>Workout Timer</h1>
+  const currentExercise = isRestingBetweenSets ? null : exercises[currentExerciseIndex]
+  const nextExercise = isRestingBetweenSets
+    ? exercises[0]
+    : currentExerciseIndex < exercises.length - 1
+    ? exercises[currentExerciseIndex + 1]
+    : currentSet < sets && betweenSetRest > 0
+    ? null
+    : currentSet < sets
+    ? exercises[0]
+    : null
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext
-          items={exercises.map((ex) => ex.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <div className="exercises-list">
-            {exercises.map((exercise) => (
-              <SortableItem
-                key={exercise.id}
-                exercise={exercise}
-                editingId={editingId}
-                setEditingId={setEditingId}
-                updateExercise={updateExercise}
-                deleteExercise={deleteExercise}
-                formatTime={formatTime}
-                parseTime={parseTime}
-              />
-            ))}
+  const setTime = exercises.reduce((sum, ex) => sum + ex.time, 0)
+  const totalTime = setTime * sets + (sets > 1 ? betweenSetRest * (sets - 1) : 0)
+
+  if (timerState === 'setup') {
+    return (
+      <div className="app">
+        <h1>Workout Timer</h1>
+
+        <div className="setup-container">
+          <div className="exercises-section">
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={exercises.map((ex) => ex.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="exercises-list">
+                  {exercises.map((exercise) => (
+                    <SortableItem
+                      key={exercise.id}
+                      exercise={exercise}
+                      editingId={editingId}
+                      setEditingId={setEditingId}
+                      updateExercise={updateExercise}
+                      deleteExercise={deleteExercise}
+                      formatTime={formatTime}
+                      parseTime={parseTime}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+
+            <button className="add-btn" onClick={addExercise}>
+              + Add Exercise
+            </button>
           </div>
-        </SortableContext>
-      </DndContext>
 
-      <button className="add-btn" onClick={addExercise}>
-        + Add Exercise
-      </button>
+          <div className="workout-config">
+            <div className="sets-control">
+              <label>Sets</label>
+              <div className="control-group">
+                <button onClick={() => setSets(Math.max(1, sets - 1))}>−</button>
+                <span className="sets-number">{sets}</span>
+                <button onClick={() => setSets(sets + 1)}>+</button>
+              </div>
+            </div>
 
-      <div className="total-time">
-        Total Time:{' '}
-        {formatTime(exercises.reduce((sum, ex) => sum + ex.time, 0))}
+            <div className="rest-control">
+              <label>Rest</label>
+              <div className="rest-input-group">
+                <button onClick={() => setBetweenSetRest(Math.max(0, betweenSetRest - 15))}>−</button>
+                <input
+                  type="text"
+                  className="rest-time-input"
+                  value={formatTime(betweenSetRest)}
+                  onChange={(e) => setBetweenSetRest(parseTime(e.target.value))}
+                />
+                <button onClick={() => setBetweenSetRest(betweenSetRest + 15)}>+</button>
+              </div>
+            </div>
+
+            <div className="time-summary">
+              <div className="time-item">
+                <span className="time-label">Set</span>
+                <span className="time-value">{formatTime(setTime)}</span>
+              </div>
+              <div className="time-item">
+                <span className="time-label">Total</span>
+                <span className="time-value">{formatTime(totalTime)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button className="start-btn" onClick={startWorkout}>
+          Start Workout
+        </button>
+      </div>
+    )
+  }
+
+  if (timerState === 'finished') {
+    return (
+      <div className="app timer-view">
+        <div className="finished-screen">
+          <h1>🎉 Workout Complete!</h1>
+          <p>Great job finishing {sets} set{sets > 1 ? 's' : ''}!</p>
+          <button className="restart-btn" onClick={restartWorkout}>
+            Back to Setup
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="app timer-view">
+      {showQuitConfirm && (
+        <div className="quit-confirm-overlay">
+          <div className="quit-confirm-dialog">
+            <h2>Quit Workout?</h2>
+            <p>Your progress will be lost</p>
+            <div className="quit-confirm-buttons">
+              <button className="confirm-yes" onClick={confirmQuit}>
+                Yes, Quit
+              </button>
+              <button className="confirm-no" onClick={cancelQuit}>
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="timer-header">
+        <button className="home-btn" onClick={handleHomeClick}>
+          ← Home
+        </button>
+        <div className="set-indicator">
+          Set {currentSet} of {sets}
+        </div>
+      </div>
+
+      <div className="current-exercise">
+        <div className="exercise-label">{isRestingBetweenSets ? 'Rest' : 'Current'}</div>
+        <h1 className="exercise-name-large">
+          {isRestingBetweenSets ? 'Rest Between Sets' : currentExercise?.name}
+        </h1>
+        <div className="time-display">{formatTime(timeRemaining)}</div>
+      </div>
+
+      {nextExercise && (
+        <div className="next-exercise">
+          <div className="next-label">Next</div>
+          <div className="next-name">{nextExercise.name}</div>
+          <div className="next-time">{formatTime(nextExercise.time)}</div>
+        </div>
+      )}
+      {isRestingBetweenSets && (
+        <div className="next-exercise">
+          <div className="next-label">Next Set</div>
+          <div className="next-name">Starting Set {currentSet}</div>
+        </div>
+      )}
+
+      <div className="timer-controls">
+        {timerState === 'running' ? (
+          <button className="pause-btn" onClick={pauseWorkout}>
+            ⏸ Pause
+          </button>
+        ) : (
+          <button className="resume-btn" onClick={resumeWorkout}>
+            ▶ Resume
+          </button>
+        )}
       </div>
     </div>
   )
