@@ -11,6 +11,9 @@ interface TimerViewProps {
   nextExercise: Exercise | null;
   timeRemaining: number;
   isRestingBetweenSets: boolean;
+  isLastExerciseInSet: boolean;
+  nextIsRest: boolean;
+  betweenSetRest: number;
   onHomeClick: () => void;
   onPause: () => void;
   onResume: () => void;
@@ -27,6 +30,9 @@ export function TimerView({
   nextExercise,
   timeRemaining,
   isRestingBetweenSets,
+  isLastExerciseInSet,
+  nextIsRest,
+  betweenSetRest,
   onHomeClick,
   onPause,
   onResume,
@@ -58,17 +64,40 @@ export function TimerView({
         <div className="time-display">{formatTime(timeRemaining)}</div>
       </div>
 
-      {nextExercise && (
+      {/* Show next exercise with optional set ending indicator */}
+      {nextExercise && !nextIsRest && (
         <div className="next-exercise">
-          <div className="next-label">Next</div>
+          <div className="next-label">
+            Next{isLastExerciseInSet && currentSet < sets ? ` (End of Set ${currentSet})` : ""}
+          </div>
           <div className="next-name">{nextExercise.name}</div>
           <div className="next-time">{formatTime(nextExercise.time)}</div>
         </div>
       )}
+
+      {/* Show rest between sets as next */}
+      {nextIsRest && !isRestingBetweenSets && (
+        <div className="next-exercise">
+          <div className="next-label">Next (End of Set {currentSet})</div>
+          <div className="next-name">Rest Between Sets</div>
+          <div className="next-time">{formatTime(betweenSetRest)}</div>
+        </div>
+      )}
+
+      {/* When currently resting, show what's coming after rest */}
       {isRestingBetweenSets && (
         <div className="next-exercise">
           <div className="next-label">Up Next</div>
           <div className="next-name">Set {currentSet}</div>
+          {nextExercise && <div className="next-time">{nextExercise.name}</div>}
+        </div>
+      )}
+
+      {/* Show workout complete indicator when on last exercise of last set */}
+      {isLastExerciseInSet && currentSet >= sets && !isRestingBetweenSets && (
+        <div className="next-exercise">
+          <div className="next-label">After This</div>
+          <div className="next-name">Workout Complete! 🎉</div>
         </div>
       )}
 

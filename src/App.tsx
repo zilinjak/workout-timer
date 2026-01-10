@@ -7,10 +7,7 @@ import "./App.css";
 
 function App() {
   const [exercises, setExercises] = useState<Exercise[]>([
-    { id: "1", name: "Warm Up", time: 10 },
-    // { id: '2', name: 'Push Ups', time: 60 },
-    // { id: '3', name: 'Rest', time: 30 },
-    // { id: '4', name: 'Squats', time: 60 },
+    { id: "1", name: "Warm Up", time: 1 },
   ]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [sets, setSets] = useState(3);
@@ -204,12 +201,17 @@ function App() {
   const currentExercise = isRestingBetweenSets
     ? null
     : exercises[currentExerciseIndex];
+  
+  // Check if we're on the last exercise of the current set
+  const isLastExerciseInSet = currentExerciseIndex === exercises.length - 1;
+  
+  // Check if rest is coming next (last exercise of set, not last set, and rest is configured)
+  const nextIsRest = isLastExerciseInSet && currentSet < sets && betweenSetRest > 0;
+  
   const nextExercise = isRestingBetweenSets
     ? exercises[0]
     : currentExerciseIndex < exercises.length - 1
     ? exercises[currentExerciseIndex + 1]
-    : currentSet < sets && betweenSetRest > 0
-    ? null
     : currentSet < sets
     ? exercises[0]
     : null;
@@ -244,6 +246,9 @@ function App() {
       nextExercise={nextExercise}
       timeRemaining={timeRemaining}
       isRestingBetweenSets={isRestingBetweenSets}
+      isLastExerciseInSet={isLastExerciseInSet}
+      nextIsRest={nextIsRest}
+      betweenSetRest={betweenSetRest}
       onHomeClick={handleHomeClick}
       onPause={pauseWorkout}
       onResume={resumeWorkout}
