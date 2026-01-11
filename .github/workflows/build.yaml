@@ -12,7 +12,7 @@ on:
 
 jobs:
   build-docker:
-    uses: zilinek/homelab-k8s/.github/workflows/build-docker.yaml@main
+    uses: zilinjak/homelab-k8s/.github/workflows/build-docker.yaml@main
     with:
       dockerfile_path: './Dockerfile'
       docker_context: '.'
@@ -27,7 +27,7 @@ jobs:
 
   build-helm:
     needs: build-docker
-    uses: zilinek/homelab-k8s/.github/workflows/build-chart.yaml@main
+    uses: zilinjak/homelab-k8s/.github/workflows/build-chart.yaml@main
     with:
       chart_path: './helm/workout-timer'
       registry: 'oci://registry-1.docker.io'
