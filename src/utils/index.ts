@@ -1,3 +1,5 @@
+import { Exercise } from "../types";
+
 export const formatTime = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
@@ -18,16 +20,45 @@ export const parseTime = (timeStr: string): number => {
 export const getColorFromName = (name: string): string => {
   // Normalize the name (lowercase, trim)
   const normalizedName = name.toLowerCase().trim();
-  
+
   // Generate a hash from the string
   let hash = 0;
   for (let i = 0; i < normalizedName.length; i++) {
     const char = normalizedName.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32bit integer
   }
-  
+
   // Use the hash to generate HSL color with good saturation and lightness
   const hue = Math.abs(hash) % 360;
   return `hsl(${hue}, 65%, 45%)`;
 };
+
+// Storage functions for persisting workout configuration
+const STORAGE_KEY = "workout-timer-config";
+
+export interface StoredConfig {
+  exercises: Exercise[];
+  sets: number;
+  betweenSetRest: number;
+}
+
+export function loadStoredConfig(): StoredConfig | null {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.error("Failed to load config from localStorage:", e);
+  }
+  return null;
+}
+
+export function saveConfig(config: StoredConfig): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+  } catch (e) {
+    console.error("Failed to save config to localStorage:", e);
+  }
+}

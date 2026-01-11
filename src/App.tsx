@@ -1,17 +1,20 @@
 import { useState, useEffect, useRef } from "react";
 import { Exercise, TimerState } from "./types";
+import { loadStoredConfig, saveConfig } from "./utils";
 import { SetupView } from "./components/SetupView";
 import { TimerView } from "./components/TimerView";
 import { FinishedView } from "./components/FinishedView";
 import "./App.css";
 
+const storedConfig = loadStoredConfig();
+
 function App() {
-  const [exercises, setExercises] = useState<Exercise[]>([
-    { id: "1", name: "Warm Up", time: 1 },
-  ]);
+  const [exercises, setExercises] = useState<Exercise[]>(
+    storedConfig?.exercises ?? [{ id: "1", name: "Warm Up", time: 1 }]
+  );
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [sets, setSets] = useState(3);
-  const [betweenSetRest, setBetweenSetRest] = useState(0);
+  const [sets, setSets] = useState(storedConfig?.sets ?? 3);
+  const [betweenSetRest, setBetweenSetRest] = useState(storedConfig?.betweenSetRest ?? 0);
   const [timerState, setTimerState] = useState<TimerState>("setup");
   const [currentSet, setCurrentSet] = useState(1);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
@@ -19,6 +22,11 @@ function App() {
   const [isRestingBetweenSets, setIsRestingBetweenSets] = useState(false);
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
   const intervalRef = useRef<number | null>(null);
+
+  // Save config to localStorage whenever it changes
+  useEffect(() => {
+    saveConfig({ exercises, sets, betweenSetRest });
+  }, [exercises, sets, betweenSetRest]);
 
   // Refs to track current values for use in advanceToNext (avoids stale closures)
   const currentSetRef = useRef(currentSet);
@@ -198,6 +206,13 @@ function App() {
     setIsRestingBetweenSets(false);
   };
 
+  const resetConfig = () => {
+    console.log("🗑️ Resetting configuration to defaults");
+    setExercises([{ id: "1", name: "Warm Up", time: 60 }]);
+    setSets(3);
+    setBetweenSetRest(0);
+  };
+
   const currentExercise = isRestingBetweenSets
     ? null
     : exercises[currentExerciseIndex];
@@ -228,6 +243,7 @@ function App() {
         betweenSetRest={betweenSetRest}
         setBetweenSetRest={setBetweenSetRest}
         onStartWorkout={startWorkout}
+        onReset={resetConfig}
       />
     );
   }

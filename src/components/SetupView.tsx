@@ -27,6 +27,7 @@ interface SetupViewProps {
   betweenSetRest: number;
   setBetweenSetRest: (rest: number) => void;
   onStartWorkout: () => void;
+  onReset: () => void;
 }
 
 export function SetupView({
@@ -39,6 +40,7 @@ export function SetupView({
   betweenSetRest,
   setBetweenSetRest,
   onStartWorkout,
+  onReset,
 }: SetupViewProps) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -98,6 +100,11 @@ export function SetupView({
 
   return (
     <div className="app">
+      <div className="setup-header">
+        <button className="reset-memory-btn" onClick={onReset}>
+          Reset workout memory
+        </button>
+      </div>
       <h1>Workout Timer</h1>
 
       <div className="setup-container">

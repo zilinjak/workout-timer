@@ -8,6 +8,30 @@
   align-items: center;
 }
 
+.setup-header {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.reset-memory-btn {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 6px;
+}
+
+.reset-memory-btn:hover {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
 h1 {
   text-align: center;
   margin-bottom: 2rem;
@@ -128,7 +152,7 @@ h1 {
   border: 2px solid #e5e7eb;
   border-radius: 6px;
   outline: none;
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
   background: #f9fafb;
   color: #667eea;
   transition: all 0.2s;
@@ -317,7 +341,7 @@ h1 {
   border: 2px solid #e5e7eb;
   border-radius: 6px;
   outline: none;
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
   font-weight: 600;
   color: #667eea;
 }
@@ -351,7 +375,7 @@ h1 {
 .time-value {
   font-size: 1.2rem;
   font-weight: 700;
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -376,6 +400,36 @@ h1 {
 .start-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.button-group {
+  width: 100%;
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.reset-btn {
+  padding: 1.25rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border: 2px solid #e5e7eb;
+  background: white;
+  color: #6b7280;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reset-btn:hover {
+  border-color: #d1d5db;
+  background: #f9fafb;
+  color: #374151;
+}
+
+.button-group .start-btn {
+  flex: 1;
+  margin-top: 0;
 }
 
 /* Timer View */
@@ -451,7 +505,7 @@ h1 {
 .time-display {
   font-size: 6rem;
   font-weight: 700;
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -489,7 +543,7 @@ h1 {
 .next-time {
   font-size: 1.2rem;
   font-weight: 600;
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
   color: #667eea;
 }
 
