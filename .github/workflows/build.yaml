@@ -16,7 +16,7 @@ jobs:
     with:
       dockerfile_path: './Dockerfile'
       docker_context: '.'
-      image_name: 'zilinek/workout-timer'
+      image_name: 'zilinjak99/workout-timer'
       registry: 'docker.io'
       push: ${{ github.event_name != 'pull_request' }}
       platforms: 'linux/amd64,linux/arm64'
@@ -31,7 +31,7 @@ jobs:
     with:
       chart_path: './helm/workout-timer'
       registry: 'oci://registry-1.docker.io'
-      registry_prefix: 'zilinek/charts'
+      registry_prefix: 'zilinjak99/charts'
       push: ${{ github.event_name != 'pull_request' }}
     secrets:
       registry_username: ${{ secrets.DOCKERHUB_USERNAME }}
