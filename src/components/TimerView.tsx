@@ -1,4 +1,4 @@
-import { Exercise, TimerState } from "../types";
+import type { Exercise, TimerState } from "../types";
 import { formatTime } from "../utils";
 import { QuitConfirmDialog } from "./QuitConfirmDialog";
 
@@ -11,9 +11,12 @@ interface TimerViewProps {
   nextExercise: Exercise | null;
   timeRemaining: number;
   isRestingBetweenSets: boolean;
+  isRestingBetweenExercises: boolean;
   isLastExerciseInSet: boolean;
   nextIsRest: boolean;
+  nextIsExerciseRest: boolean;
   betweenSetRest: number;
+  betweenExerciseRest: number;
   onHomeClick: () => void;
   onPause: () => void;
   onResume: () => void;
@@ -30,15 +33,26 @@ export function TimerView({
   nextExercise,
   timeRemaining,
   isRestingBetweenSets,
+  isRestingBetweenExercises,
   isLastExerciseInSet,
   nextIsRest,
+  nextIsExerciseRest,
   betweenSetRest,
+  betweenExerciseRest,
   onHomeClick,
   onPause,
   onResume,
   onConfirmQuit,
   onCancelQuit,
 }: TimerViewProps) {
+  const isResting = isRestingBetweenSets || isRestingBetweenExercises;
+  const currentCardLabel = isResting ? "Rest" : "Current";
+  const currentCardName = isRestingBetweenSets
+    ? "Rest Between Sets"
+    : isRestingBetweenExercises
+    ? "Rest Between Exercises"
+    : currentExercise?.name ?? "";
+
   return (
     <div className="app timer-view">
       {showQuitConfirm && (
@@ -55,17 +69,13 @@ export function TimerView({
       </div>
 
       <div className="current-exercise">
-        <div className="exercise-label">
-          {isRestingBetweenSets ? "Rest" : "Current"}
-        </div>
-        <h1 className="exercise-name-large">
-          {isRestingBetweenSets ? "Rest Between Sets" : currentExercise?.name}
-        </h1>
+        <div className="exercise-label">{currentCardLabel}</div>
+        <h1 className="exercise-name-large">{currentCardName}</h1>
         <div className="time-display">{formatTime(timeRemaining)}</div>
       </div>
 
       {/* Show next exercise with optional set ending indicator */}
-      {nextExercise && !nextIsRest && (
+      {nextExercise && !isResting && !nextIsRest && !nextIsExerciseRest && (
         <div className="next-exercise">
           <div className="next-label">
             Next
@@ -78,8 +88,17 @@ export function TimerView({
         </div>
       )}
 
+      {/* Show rest between exercises as next action */}
+      {nextIsExerciseRest && !isResting && (
+        <div className="next-exercise">
+          <div className="next-label">Next</div>
+          <div className="next-name">Rest Between Exercises</div>
+          <div className="next-time">{formatTime(betweenExerciseRest)}</div>
+        </div>
+      )}
+
       {/* Show rest between sets as next */}
-      {nextIsRest && !isRestingBetweenSets && (
+      {nextIsRest && !isResting && (
         <div className="next-exercise">
           <div className="next-label">Next (End of Set {currentSet})</div>
           <div className="next-name">Rest Between Sets</div>
@@ -96,13 +115,24 @@ export function TimerView({
         </div>
       )}
 
-      {/* Show workout complete indicator when on last exercise of last set */}
-      {isLastExerciseInSet && currentSet >= sets && !isRestingBetweenSets && (
+      {isRestingBetweenExercises && nextExercise && (
         <div className="next-exercise">
-          <div className="next-label">After This</div>
-          <div className="next-name">Workout Complete! 🎉</div>
+          <div className="next-label">Up Next</div>
+          <div className="next-name">{nextExercise.name}</div>
+          <div className="next-time">{formatTime(nextExercise.time)}</div>
         </div>
       )}
+
+      {/* Show workout complete indicator when on last exercise of last set */}
+      {isLastExerciseInSet &&
+        currentSet >= sets &&
+        !isRestingBetweenSets &&
+        !isRestingBetweenExercises && (
+          <div className="next-exercise">
+            <div className="next-label">After This</div>
+            <div className="next-name">Workout Complete! 🎉</div>
+          </div>
+        )}
 
       <div className="timer-controls">
         {timerState === "running" ? (

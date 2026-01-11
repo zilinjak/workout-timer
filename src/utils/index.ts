@@ -1,4 +1,4 @@
-import { Exercise } from "../types";
+import type { Exercise } from "../types";
 
 export const formatTime = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
@@ -41,13 +41,24 @@ export interface StoredConfig {
   exercises: Exercise[];
   sets: number;
   betweenSetRest: number;
+  betweenExerciseRest: number;
 }
 
 export function loadStoredConfig(): StoredConfig | null {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      return {
+        exercises: Array.isArray(parsed.exercises) ? parsed.exercises : [],
+        sets: typeof parsed.sets === "number" ? parsed.sets : 1,
+        betweenSetRest:
+          typeof parsed.betweenSetRest === "number" ? parsed.betweenSetRest : 0,
+        betweenExerciseRest:
+          typeof parsed.betweenExerciseRest === "number"
+            ? parsed.betweenExerciseRest
+            : 0,
+      };
     }
   } catch (e) {
     console.error("Failed to load config from localStorage:", e);

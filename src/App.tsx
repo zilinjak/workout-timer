@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Exercise, TimerState } from "./types";
+import type { Exercise, TimerState } from "./types";
 import { loadStoredConfig, saveConfig } from "./utils";
 import { SetupView } from "./components/SetupView";
 import { TimerView } from "./components/TimerView";
@@ -15,26 +15,32 @@ function App() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [sets, setSets] = useState(storedConfig?.sets ?? 3);
   const [betweenSetRest, setBetweenSetRest] = useState(storedConfig?.betweenSetRest ?? 0);
+  const [betweenExerciseRest, setBetweenExerciseRest] = useState(
+    storedConfig?.betweenExerciseRest ?? 0
+  );
   const [timerState, setTimerState] = useState<TimerState>("setup");
   const [currentSet, setCurrentSet] = useState(1);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [isRestingBetweenSets, setIsRestingBetweenSets] = useState(false);
+  const [isRestingBetweenExercises, setIsRestingBetweenExercises] = useState(false);
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
   const intervalRef = useRef<number | null>(null);
 
   // Save config to localStorage whenever it changes
   useEffect(() => {
-    saveConfig({ exercises, sets, betweenSetRest });
-  }, [exercises, sets, betweenSetRest]);
+    saveConfig({ exercises, sets, betweenSetRest, betweenExerciseRest });
+  }, [exercises, sets, betweenSetRest, betweenExerciseRest]);
 
   // Refs to track current values for use in advanceToNext (avoids stale closures)
   const currentSetRef = useRef(currentSet);
   const currentExerciseIndexRef = useRef(currentExerciseIndex);
   const isRestingBetweenSetsRef = useRef(isRestingBetweenSets);
+  const isRestingBetweenExercisesRef = useRef(isRestingBetweenExercises);
   const exercisesRef = useRef(exercises);
   const setsRef = useRef(sets);
   const betweenSetRestRef = useRef(betweenSetRest);
+  const betweenExerciseRestRef = useRef(betweenExerciseRest);
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -47,6 +53,9 @@ function App() {
     isRestingBetweenSetsRef.current = isRestingBetweenSets;
   }, [isRestingBetweenSets]);
   useEffect(() => {
+    isRestingBetweenExercisesRef.current = isRestingBetweenExercises;
+  }, [isRestingBetweenExercises]);
+  useEffect(() => {
     exercisesRef.current = exercises;
   }, [exercises]);
   useEffect(() => {
@@ -55,6 +64,9 @@ function App() {
   useEffect(() => {
     betweenSetRestRef.current = betweenSetRest;
   }, [betweenSetRest]);
+  useEffect(() => {
+    betweenExerciseRestRef.current = betweenExerciseRest;
+  }, [betweenExerciseRest]);
 
   useEffect(() => {
     if (timerState === "running" && timeRemaining > 0) {
@@ -86,9 +98,11 @@ function App() {
     const currentSetVal = currentSetRef.current;
     const currentExerciseIndexVal = currentExerciseIndexRef.current;
     const isRestingBetweenSetsVal = isRestingBetweenSetsRef.current;
+    const isRestingBetweenExercisesVal = isRestingBetweenExercisesRef.current;
     const exercisesVal = exercisesRef.current;
     const setsVal = setsRef.current;
     const betweenSetRestVal = betweenSetRestRef.current;
+    const betweenExerciseRestVal = betweenExerciseRestRef.current;
 
     console.log("🔄 advanceToNext called", {
       currentSet: currentSetVal,
@@ -96,24 +110,56 @@ function App() {
       currentExerciseIndex: currentExerciseIndexVal,
       totalExercises: exercisesVal.length,
       isRestingBetweenSets: isRestingBetweenSetsVal,
+      isRestingBetweenExercises: isRestingBetweenExercisesVal,
       betweenSetRest: betweenSetRestVal,
+      betweenExerciseRest: betweenExerciseRestVal,
       currentExerciseName: exercisesVal[currentExerciseIndexVal]?.name,
     });
+
+    if (exercisesVal.length === 0) {
+      console.warn("No exercises available; ending workout");
+      setTimerState("finished");
+      return;
+    }
 
     if (isRestingBetweenSetsVal) {
       // Finished resting, start the new set
       console.log("✅ Finished rest, starting set", currentSetVal);
       setCurrentExerciseIndex(0);
-      setTimeRemaining(exercisesVal[0].time);
+      if (exercisesVal[0]) {
+        setTimeRemaining(exercisesVal[0].time);
+      } else {
+        setTimerState("finished");
+      }
       setIsRestingBetweenSets(false);
+      setIsRestingBetweenExercises(false);
+    } else if (isRestingBetweenExercisesVal) {
+      console.log("✅ Finished rest between exercises");
+      const nextExercise = exercisesVal[currentExerciseIndexVal];
+      if (nextExercise) {
+        setIsRestingBetweenExercises(false);
+        setTimeRemaining(nextExercise.time);
+      } else {
+        console.warn("No exercise found after rest; ending workout");
+        setTimerState("finished");
+      }
     } else if (currentExerciseIndexVal < exercisesVal.length - 1) {
       // Move to next exercise in the current set
       const nextIndex = currentExerciseIndexVal + 1;
-      console.log(
-        `➡️ Moving to next exercise: ${exercisesVal[nextIndex].name} (index ${nextIndex})`
-      );
-      setCurrentExerciseIndex(nextIndex);
-      setTimeRemaining(exercisesVal[nextIndex].time);
+      if (betweenExerciseRestVal > 0) {
+        console.log(
+          `😴 Starting rest between exercises: ${betweenExerciseRestVal}s before ${exercisesVal[nextIndex].name}`
+        );
+        setCurrentExerciseIndex(nextIndex);
+        setIsRestingBetweenExercises(true);
+        setTimeRemaining(betweenExerciseRestVal);
+      } else {
+        console.log(
+          `➡️ Moving to next exercise: ${exercisesVal[nextIndex].name} (index ${nextIndex})`
+        );
+        setCurrentExerciseIndex(nextIndex);
+        setTimeRemaining(exercisesVal[nextIndex].time);
+      }
     } else {
       // Finished all exercises in the current set
       console.log("🏁 Finished all exercises in set", currentSetVal);
@@ -129,8 +175,13 @@ function App() {
         } else {
           console.log("⏭️ No rest, starting next set immediately");
           setCurrentExerciseIndex(0);
-          setTimeRemaining(exercisesVal[0].time);
+          if (exercisesVal[0]) {
+            setTimeRemaining(exercisesVal[0].time);
+          } else {
+            setTimerState("finished");
+          }
         }
+        setIsRestingBetweenExercises(false);
       } else {
         // Finished all sets
         console.log("🎉 Finished all sets! Workout complete!");
@@ -146,11 +197,13 @@ function App() {
       totalExercises: exercises.length,
       exercises: exercises.map((e) => ({ name: e.name, time: e.time })),
       betweenSetRest,
+      betweenExerciseRest,
     });
     setCurrentSet(1);
     setCurrentExerciseIndex(0);
     setTimeRemaining(exercises[0].time);
     setIsRestingBetweenSets(false);
+    setIsRestingBetweenExercises(false);
     setTimerState("running");
   };
 
@@ -160,6 +213,7 @@ function App() {
       currentExerciseIndex,
       timeRemaining,
       isRestingBetweenSets,
+      isRestingBetweenExercises,
     });
     setTimerState("paused");
   };
@@ -170,6 +224,7 @@ function App() {
       currentExerciseIndex,
       timeRemaining,
       isRestingBetweenSets,
+      isRestingBetweenExercises,
     });
     setTimerState("running");
   };
@@ -190,6 +245,7 @@ function App() {
     setCurrentExerciseIndex(0);
     setTimeRemaining(0);
     setIsRestingBetweenSets(false);
+    setIsRestingBetweenExercises(false);
   };
 
   const cancelQuit = () => {
@@ -204,6 +260,7 @@ function App() {
     setCurrentExerciseIndex(0);
     setTimeRemaining(0);
     setIsRestingBetweenSets(false);
+    setIsRestingBetweenExercises(false);
   };
 
   const resetConfig = () => {
@@ -211,25 +268,45 @@ function App() {
     setExercises([{ id: "1", name: "Warm Up", time: 60 }]);
     setSets(3);
     setBetweenSetRest(0);
+    setBetweenExerciseRest(0);
   };
 
-  const currentExercise = isRestingBetweenSets
-    ? null
-    : exercises[currentExerciseIndex];
-  
-  // Check if we're on the last exercise of the current set
-  const isLastExerciseInSet = currentExerciseIndex === exercises.length - 1;
-  
-  // Check if rest is coming next (last exercise of set, not last set, and rest is configured)
-  const nextIsRest = isLastExerciseInSet && currentSet < sets && betweenSetRest > 0;
-  
-  const nextExercise = isRestingBetweenSets
-    ? exercises[0]
-    : currentExerciseIndex < exercises.length - 1
-    ? exercises[currentExerciseIndex + 1]
-    : currentSet < sets
-    ? exercises[0]
-    : null;
+  const currentExercise =
+    isRestingBetweenSets || isRestingBetweenExercises
+      ? null
+      : exercises[currentExerciseIndex] ?? null;
+
+  const hasMoreExercisesInSet = currentExerciseIndex < exercises.length - 1;
+
+  const isLastExerciseInSet =
+    !isRestingBetweenSets &&
+    !isRestingBetweenExercises &&
+    currentExerciseIndex === exercises.length - 1;
+
+  const nextIsRest =
+    isLastExerciseInSet && currentSet < sets && betweenSetRest > 0;
+
+  const nextIsExerciseRest =
+    !isRestingBetweenSets &&
+    !isRestingBetweenExercises &&
+    hasMoreExercisesInSet &&
+    betweenExerciseRest > 0;
+
+  const nextExercise = (() => {
+    if (isRestingBetweenSets) {
+      return exercises[0] ?? null;
+    }
+    if (isRestingBetweenExercises) {
+      return exercises[currentExerciseIndex] ?? null;
+    }
+    if (hasMoreExercisesInSet) {
+      return exercises[currentExerciseIndex + 1] ?? null;
+    }
+    if (currentSet < sets) {
+      return exercises[0] ?? null;
+    }
+    return null;
+  })();
 
   if (timerState === "setup") {
     return (
@@ -242,6 +319,8 @@ function App() {
         setSets={setSets}
         betweenSetRest={betweenSetRest}
         setBetweenSetRest={setBetweenSetRest}
+        betweenExerciseRest={betweenExerciseRest}
+        setBetweenExerciseRest={setBetweenExerciseRest}
         onStartWorkout={startWorkout}
         onReset={resetConfig}
       />
@@ -262,9 +341,12 @@ function App() {
       nextExercise={nextExercise}
       timeRemaining={timeRemaining}
       isRestingBetweenSets={isRestingBetweenSets}
+      isRestingBetweenExercises={isRestingBetweenExercises}
       isLastExerciseInSet={isLastExerciseInSet}
       nextIsRest={nextIsRest}
+      nextIsExerciseRest={nextIsExerciseRest}
       betweenSetRest={betweenSetRest}
+      betweenExerciseRest={betweenExerciseRest}
       onHomeClick={handleHomeClick}
       onPause={pauseWorkout}
       onResume={resumeWorkout}

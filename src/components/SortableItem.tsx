@@ -1,6 +1,6 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Exercise } from "../types";
+import type { Exercise } from "../types";
 import { formatTime, parseTime, getColorFromName } from "../utils";
 
 interface SortableItemProps {

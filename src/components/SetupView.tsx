@@ -5,7 +5,6 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -13,19 +12,23 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Exercise } from "../types";
+import type { DragEndEvent } from "@dnd-kit/core";
+import type { Dispatch, SetStateAction } from "react";
+import type { Exercise } from "../types";
 import { formatTime, parseTime } from "../utils";
 import { SortableItem } from "./SortableItem";
 
 interface SetupViewProps {
   exercises: Exercise[];
-  setExercises: (exercises: Exercise[]) => void;
+  setExercises: Dispatch<SetStateAction<Exercise[]>>;
   editingId: string | null;
   setEditingId: (id: string | null) => void;
   sets: number;
   setSets: (sets: number) => void;
   betweenSetRest: number;
   setBetweenSetRest: (rest: number) => void;
+  betweenExerciseRest: number;
+  setBetweenExerciseRest: (rest: number) => void;
   onStartWorkout: () => void;
   onReset: () => void;
 }
@@ -39,6 +42,8 @@ export function SetupView({
   setSets,
   betweenSetRest,
   setBetweenSetRest,
+  betweenExerciseRest,
+  setBetweenExerciseRest,
   onStartWorkout,
   onReset,
 }: SetupViewProps) {
@@ -95,8 +100,13 @@ export function SetupView({
   };
 
   const setTime = exercises.reduce((sum, ex) => sum + ex.time, 0);
+  const restBetweenExercisesTotal =
+    exercises.length > 1
+      ? betweenExerciseRest * (exercises.length - 1) * sets
+      : 0;
+  const restBetweenSetsTotal = sets > 1 ? betweenSetRest * (sets - 1) : 0;
   const totalTime =
-    setTime * sets + (sets > 1 ? betweenSetRest * (sets - 1) : 0);
+    setTime * sets + restBetweenExercisesTotal + restBetweenSetsTotal;
 
   return (
     <div className="app">
@@ -150,7 +160,33 @@ export function SetupView({
           </div>
 
           <div className="rest-control">
-            <label>Rest</label>
+            <label>Rest Between Exercises</label>
+            <div className="rest-input-group">
+              <button
+                onClick={() =>
+                  setBetweenExerciseRest(Math.max(0, betweenExerciseRest - 15))
+                }
+              >
+                −
+              </button>
+              <input
+                type="text"
+                className="rest-time-input"
+                value={formatTime(betweenExerciseRest)}
+                onChange={(e) =>
+                  setBetweenExerciseRest(parseTime(e.target.value))
+                }
+              />
+              <button
+                onClick={() => setBetweenExerciseRest(betweenExerciseRest + 15)}
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <div className="rest-control">
+            <label>Rest Between Sets</label>
             <div className="rest-input-group">
               <button
                 onClick={() =>
