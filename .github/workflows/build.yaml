@@ -18,11 +18,11 @@ jobs:
       docker_context: '.'
       image_name: 'zilinjak99/workout-timer'
       registry: 'docker.io'
+      registry_username: ${{ vars.DOCKERHUB_USERNAME }}
       push: ${{ github.event_name != 'pull_request' }}
       platforms: 'linux/amd64,linux/arm64'
       tags_suffix: ${{ github.ref == 'refs/heads/main' && 'latest' || 'develop' }}
     secrets:
-      registry_username: ${{ secrets.DOCKERHUB_USERNAME }}
       registry_password: ${{ secrets.DOCKERHUB_TOKEN }}
 
   build-helm:
@@ -31,7 +31,7 @@ jobs:
     with:
       chart_path: './helm/workout-timer'
       registry: 'oci://registry-1.docker.io'
+      registry_username: ${{ vars.DOCKERHUB_USERNAME }}
       push: ${{ github.event_name != 'pull_request' }}
     secrets:
-      registry_username: ${{ secrets.DOCKERHUB_USERNAME }}
       registry_password: ${{ secrets.DOCKERHUB_TOKEN }}
