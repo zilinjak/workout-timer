@@ -31,7 +31,6 @@ jobs:
     with:
       chart_path: './helm/workout-timer'
       registry: 'oci://registry-1.docker.io'
-      registry_prefix: 'zilinjak99/charts'
       push: ${{ github.event_name != 'pull_request' }}
     secrets:
       registry_username: ${{ secrets.DOCKERHUB_USERNAME }}
