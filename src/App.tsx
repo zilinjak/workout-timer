@@ -14,7 +14,9 @@ function App() {
   );
   const [editingId, setEditingId] = useState<string | null>(null);
   const [sets, setSets] = useState(storedConfig?.sets ?? 3);
-  const [betweenSetRest, setBetweenSetRest] = useState(storedConfig?.betweenSetRest ?? 0);
+  const [betweenSetRest, setBetweenSetRest] = useState(
+    storedConfig?.betweenSetRest ?? 0
+  );
   const [betweenExerciseRest, setBetweenExerciseRest] = useState(
     storedConfig?.betweenExerciseRest ?? 0
   );
@@ -23,7 +25,8 @@ function App() {
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [isRestingBetweenSets, setIsRestingBetweenSets] = useState(false);
-  const [isRestingBetweenExercises, setIsRestingBetweenExercises] = useState(false);
+  const [isRestingBetweenExercises, setIsRestingBetweenExercises] =
+    useState(false);
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
   const intervalRef = useRef<number | null>(null);
 
@@ -67,31 +70,6 @@ function App() {
   useEffect(() => {
     betweenExerciseRestRef.current = betweenExerciseRest;
   }, [betweenExerciseRest]);
-
-  useEffect(() => {
-    if (timerState === "running" && timeRemaining > 0) {
-      intervalRef.current = window.setInterval(() => {
-        setTimeRemaining((prev) => {
-          if (prev <= 1) {
-            advanceToNext();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [timerState, timeRemaining]);
 
   const advanceToNext = () => {
     // Use refs to get current values (avoids stale closure issues)
@@ -189,6 +167,31 @@ function App() {
       }
     }
   };
+
+  useEffect(() => {
+    if (timerState === "running" && timeRemaining > 0) {
+      intervalRef.current = window.setInterval(() => {
+        setTimeRemaining((prev) => {
+          if (prev <= 1) {
+            advanceToNext();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [timerState, timeRemaining]);
 
   const startWorkout = () => {
     if (exercises.length === 0) return;
